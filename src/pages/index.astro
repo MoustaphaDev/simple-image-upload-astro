@@ -1,0 +1,65 @@
+---
+import fs from "fs/promises"
+import type { ImageData, UploadState } from "../types"
+import { deserializeUploadResult } from "../utils"
+
+function wait(seconds){
+	return new Promise((resolve)=>{
+		return setTimeout(resolve, seconds * 1000)
+	})
+}
+
+let uploadState:UploadState, imagesData: ImageData[];
+const maybeSerializedUploadResult = Astro.url.searchParams.toString();
+
+if (typeof uploadState !== "undefined"){
+	({uploadState, imagesData} = deserializeUploadResult(maybeSerializedUploadResult))
+}
+
+const noUpload = typeof uploadState === "undefined";
+const uploadSuccess = uploadState === "success";
+const uploadFailed = uploadState === "failed";
+---
+
+<html lang="en" class="bg-gray-100 h-full">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="generator" content={Astro.generator} />
+		<title>Astro</title>
+	</head>
+	<body class="mx-auto max-w-2xl px-6 pt-4 bg-white shadow h-full">
+		{()=>{
+				if(uploadSuccess){
+					return (
+					<p class="text-white bg-green-700 rounded px-2 py-4">Successfully uploaded {
+						imagesData.map(imageData=>{
+							const base64Image = imageData.buffer.toString("base64");
+							console.log(base64Image);
+							return ( 
+								<div class="font-bold mb-8">
+									{imageData.name}
+									<img src={`data:image/png;base64, ${base64Image}`} />
+								</div>
+								)
+							}
+						)
+					}
+					</p>)
+				} else if (uploadFailed) {
+					return <p class="text-white bg-red-500 rounded px-2 py-4">Failed to upload images</p>
+				} else if (noUpload) {
+					return <p>You can upload an image with this form</p>
+				} else {
+					return <p> Oh no! You should've never hit this stage!</p>
+				}
+			}
+		}
+		<span class="mt-4 inline-block">Select an image to upload<span>
+		<form action="/upload" method="post" enctype="multipart/form-data">
+			<input type="file" accept="image/*" multiple required name="images"><br>
+			<input type="submit" class="rounded text-zinc-100 bg-zinc-900 px-4 py-2 mt-4">
+		</form>
+	</body>
+</html>
